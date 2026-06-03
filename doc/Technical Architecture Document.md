@@ -434,7 +434,7 @@ erDiagram
         TEXT FileHash UK
         TEXT IndexedAt
     }
-    
+
     CHUNKS {
         INTEGER Id PK
         TEXT FileHash FK
@@ -443,8 +443,8 @@ erDiagram
         TEXT Content
         TEXT Embedding
     }
-    
-    FILES ||--o{ CHUNKS : has many
+
+    FILES ||--o{ CHUNKS : contains
 ```
 
 ### Detailed Schema
