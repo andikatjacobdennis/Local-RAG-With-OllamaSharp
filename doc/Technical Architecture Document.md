@@ -1,5 +1,3 @@
-﻿Here's the corrected technical documentation with all mathematical symbols, operators, and "On" notations properly formatted:
-
 # OllamaSharp RAG SQLite - Technical Documentation
 
 ## Technical Architecture Document
