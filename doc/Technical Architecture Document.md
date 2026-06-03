@@ -712,7 +712,7 @@ flowchart LR
     
     subgraph Secondary["Secondary Bottleneck Locations"]
         D[Disk I/O for SQLite reads]
-        S[Similarity Search with O(n) scan]
+        S[Similarity Search]
         M[Memory usage loading all chunks]
     end
     
