@@ -21,7 +21,7 @@
 8. [Configuration](#configuration)
 9. [Performance Characteristics](#performance-characteristics)
 10. [Error Handling](#error-handling)
-11. [Security Considerations](#security-considerations)
+11. [Security Considerations](#security-concerns)
 12. [Extensibility Points](#extensibility-points)
 
 ---
@@ -35,11 +35,11 @@ OllamaSharp RAG SQLite is a local-first Retrieval-Augmented Generation system th
 | Property | Value |
 |----------|-------|
 | Deployment Model | Local-only |
-| Vector Storage | SQLite (JSON serialized) |
+| Vector Storage | SQLite with JSON serialization |
 | Search Algorithm | Brute-force Cosine Similarity |
-| Embedding Dimension | 768 (nomic-embed-text) |
-| Context Window | ~7000 characters |
-| Chunking Strategy | Whole-file (pluggable) |
+| Embedding Dimension | 768 from nomic-embed-text |
+| Context Window | 7000 characters approximately |
+| Chunking Strategy | Whole-file with pluggable interface |
 
 ---
 
@@ -50,30 +50,30 @@ OllamaSharp RAG SQLite is a local-first Retrieval-Augmented Generation system th
 ```mermaid
 flowchart TB
     subgraph Input["Input Layer"]
-        DOC[Documents<br/>C:\RagDocuments]
+        DOC[Documents in C RagDocuments folder]
         Q[User Question]
     end
     
     subgraph Processing["Processing Layer"]
-        H[HashHelper<br/>SHA256]
-        I[DocumentIndexer<br/>Chunking & Embedding]
-        R[RagService<br/>Query Orchestration]
+        H[HashHelper for SHA256 hashing]
+        I[DocumentIndexer for chunking and embedding]
+        R[RagService for query orchestration]
     end
     
     subgraph Storage["Storage Layer"]
-        DB[(SQLite Database<br/>rag.db)]
+        DB[SQLite Database file rag.db]
         F[Files Table]
         C[Chunks Table]
     end
     
     subgraph External["External Services"]
-        O[Ollama API<br/>localhost:11434]
-        EMB[nomic-embed-text]
-        LLM[llama3:8b]
+        O[Ollama API on localhost port 11434]
+        EMB[nomic-embed-text model]
+        LLM[llama3 8b model]
     end
     
     subgraph Output["Output Layer"]
-        UI[Console UI<br/>ASCII Color]
+        UI[Console UI with ASCII colors]
         RESP[Streaming Response]
     end
     
@@ -105,41 +105,41 @@ sequenceDiagram
     participant OllamaAPI
     
     User->>Program: Enter question
-    Program->>RagService: AskStreamingAsync(question)
+    Program->>RagService: Call AskStreamingAsync with question
     
     activate RagService
-    RagService->>OllamaAPI: EmbedAsync(question)
-    OllamaAPI-->>RagService: queryVector
+    RagService->>OllamaAPI: Call EmbedAsync with question
+    OllamaAPI-->>RagService: Return queryVector
     
-    RagService->>DatabaseService: LoadChunksAsync()
-    DatabaseService-->>RagService: List<ChunkRecord>
+    RagService->>DatabaseService: Call LoadChunksAsync
+    DatabaseService-->>RagService: Return List of ChunkRecord objects
     
-    RagService->>RagService: CosineSimilarity(search)
-    RagService->>RagService: Top 10 matches
+    RagService->>RagService: Calculate CosineSimilarity for each chunk
+    RagService->>RagService: Select top 10 matches
     
     RagService->>RagService: Build prompt with context
     
-    RagService->>OllamaAPI: GenerateAsync(prompt, stream=true)
+    RagService->>OllamaAPI: Call GenerateAsync with stream equals true
     
     loop Streaming Response
-        OllamaAPI-->>RagService: responseChunk
-        RagService-->>Program: yield return chunk
+        OllamaAPI-->>RagService: Return responseChunk
+        RagService-->>Program: Yield return chunk
         Program-->>User: Display chunk
     end
     
     deactivate RagService
-    Program-->>User: Complete response
+    Program-->>User: Display complete response
 ```
 
 ---
 
 ## Component Details
 
-### 1. Program.cs (Entry Point)
+### 1. Program.cs - Entry Point
 
 **Responsibilities**:
 - Console lifecycle management
-- Command parsing (exit, help, stats)
+- Command parsing for exit, help, stats
 - ASCII UI rendering
 - Streaming output handling
 
@@ -147,9 +147,9 @@ sequenceDiagram
 
 | Method | Description |
 |--------|-------------|
-| `Main()` | Application entry, initializes services, main loop |
-| `DisplayHelp()` | Shows available commands |
-| `DisplayStats()` | Retrieves and displays system statistics |
+| Main | Application entry point initializes services and runs main loop |
+| DisplayHelp | Shows available commands to user |
+| DisplayStats | Retrieves and displays system statistics |
 
 **Console Encoding**:
 ```csharp
@@ -157,49 +157,49 @@ Console.OutputEncoding = Encoding.ASCII;
 Console.InputEncoding = Encoding.ASCII;
 ```
 
-### 2. ColorHelper.cs (UI Utilities)
+### 2. ColorHelper.cs - UI Utilities
 
 **Responsibilities**:
 - ANSI color management
 - ASCII divider generation
 - Table formatting
-- Animated spinners (thinking, loading)
+- Animated spinners for thinking and loading states
 
 **Key Methods**:
 
-| Method | Output | Purpose |
-|--------|--------|---------|
-| `WriteDivider(char, int)` | `--------` | Section separation |
-| `WriteMessage(MessageType, string)` | `[OK] Message` | Typed message with color |
-| `WriteTable(Dictionary)` | Formatted table | Statistics display |
-| `WriteBanner(string[])` | `* Banner *` | Application header |
+| Method | Output Example | Purpose |
+|--------|----------------|---------|
+| WriteDivider with char and int | dashes or equals signs | Section separation |
+| WriteMessage with MessageType and string | OK Message | Typed message with color |
+| WriteTable with Dictionary | Formatted table | Statistics display |
+| WriteBanner with string array | Star Banner | Application header display |
 
-**Message Types & Colors**:
+**Message Types and Colors**:
 
 ```mermaid
 flowchart LR
     subgraph Status["Status Messages"]
-        S[Success] --> G[Green]
-        E[Error] --> R[Red]
-        W[Warning] --> Y[Yellow]
-        I[Info] --> C[Cyan]
+        S[Success] --> G[Green color]
+        E[Error] --> R[Red color]
+        W[Warning] --> Y[Yellow color]
+        I[Info] --> C[Cyan color]
     end
     
     subgraph Process["Process Messages"]
-        P[Processing] --> Y[Yellow]
-        T[Thinking] --> M[Magenta]
-        SR[Search] --> DY[Dark Yellow]
-        DB[Database] --> DG[Dark Gray]
+        P[Processing] --> Y[Yellow color]
+        T[Thinking] --> M[Magenta color]
+        SR[Search] --> DY[Dark Yellow color]
+        DB[Database] --> DG[Dark Gray color]
     end
     
     subgraph Output["Output Messages"]
-        AI[AI Assistant] --> M[Magenta]
-        Q[Question] --> C[Cyan]
-        D[Document] --> G[Gray]
+        AI[AI Assistant] --> M[Magenta color]
+        Q[Question] --> C[Cyan color]
+        D[Document] --> G[Gray color]
     end
 ```
 
-### 3. HashHelper.cs (File Hashing)
+### 3. HashHelper.cs - File Hashing
 
 **Responsibilities**:
 - SHA256 hash computation
@@ -207,72 +207,75 @@ flowchart LR
 
 **Implementation**:
 ```csharp
-public static string GetFileHash(string filePath)
+public static string GetFileHash string filePath
 {
-    using var sha256 = SHA256.Create();
-    using var stream = File.OpenRead(filePath);
-    byte[] hash = sha256.ComputeHash(stream);
-    return Convert.ToHexString(hash);  // Returns 64-character hex string
+    if not File.Exists filePath
+        throw new FileNotFoundException
+    
+    using var sha256 = SHA256.Create
+    using var stream = File.OpenRead filePath
+    byte hash = sha256.ComputeHash stream
+    return Convert.ToHexString hash
 }
 ```
 
-### 4. DatabaseService.cs (SQLite Operations)
+### 4. DatabaseService.cs - SQLite Operations
 
 **Responsibilities**:
 - Database initialization
-- CRUD operations for Files and Chunks
+- CRUD operations for Files and Chunks tables
 - Statistics queries
 
-**Connection String**: `Data Source=rag.db`
+**Connection String**: Data Source equals rag.db
 
 **Core Methods**:
 
 | Method | SQL Operation | Purpose |
 |--------|---------------|---------|
-| `InitializeAsync()` | CREATE TABLE IF NOT EXISTS | Schema setup |
-| `FileExistsAsync(string hash)` | SELECT COUNT(*) | Duplicate detection |
-| `SaveFileAsync(string, string)` | INSERT INTO Files | Track indexed files |
-| `SaveChunkAsync(ChunkRecord)` | INSERT INTO Chunks | Store chunk + vector |
-| `LoadChunksAsync()` | SELECT * FROM Chunks | Load all for search |
-| `GetChunkCountAsync()` | SELECT COUNT(*) | Statistics |
-| `GetDocumentCountAsync()` | SELECT COUNT(*) | Statistics |
+| InitializeAsync | CREATE TABLE IF NOT EXISTS | Schema setup on first run |
+| FileExistsAsync with string hash | SELECT COUNT star | Duplicate detection using hash |
+| SaveFileAsync with string string | INSERT INTO Files | Track indexed files |
+| SaveChunkAsync with ChunkRecord | INSERT INTO Chunks | Store chunk with vector |
+| LoadChunksAsync | SELECT all from Chunks | Load all vectors for search |
+| GetChunkCountAsync | SELECT COUNT star | Statistics for display |
+| GetDocumentCountAsync | SELECT COUNT star | Statistics for display |
 
 **Vector Storage Strategy**:
 ```csharp
-// Embedding stored as JSON string
-command.Parameters.AddWithValue("$embedding", 
-    JsonSerializer.Serialize(chunk.Embedding));
+Embedding stored as JSON string
+command.Parameters.AddWithValue dollar sign embedding comma 
+    JsonSerializer.Serialize chunk.Embedding
 
-// Retrieval deserialization
-Embedding = JsonSerializer.Deserialize<float[]>(reader.GetString(5))
-    ?? Array.Empty<float>()
+Retrieval deserialization
+Embedding = JsonSerializer.Deserialize float reader.GetString 5
+    question question Array.Empty float
 ```
 
-### 5. DocumentIndexer.cs (Indexing Pipeline)
+### 5. DocumentIndexer.cs - Indexing Pipeline
 
 **Responsibilities**:
-- Document discovery
-- Change detection via hash
-- Embedding generation
+- Document discovery from folder
+- Change detection via hash comparison
+- Embedding generation via Ollama
 
 **Configuration**:
 ```csharp
-private const string DocumentsFolder = @"C:\RagDocuments";
-private readonly OllamaApiClient _embedder;  // Model: "nomic-embed-text"
+private const string DocumentsFolder = C colon backslash RagDocuments
+private readonly OllamaApiClient _embedder with model nomic-embed-text
 ```
 
 **Indexing Flow**:
 
 ```mermaid
 flowchart TD
-    START([Start IndexAsync]) --> SCAN[Scan Documents Folder]
-    SCAN --> FOREACH{For each file}
+    START[Start IndexAsync] --> SCAN[Scan Documents Folder]
+    SCAN --> FOREACH[Loop for each file]
     
     FOREACH --> HASH[Compute SHA256 Hash]
-    HASH --> EXISTS{Exists in DB?}
+    HASH --> EXISTS{Check exists in Database}
     
-    EXISTS -->|Yes| SKIP[Skip: Already indexed]
-    EXISTS -->|No| READ[Read file content]
+    EXISTS --> Yes[File exists] --> SKIP[Skip already indexed]
+    EXISTS --> No[File not exists] --> READ[Read file content]
     
     READ --> EMBED[Generate embedding via Ollama]
     EMBED --> SAVE_CHUNK[Save to Chunks table]
@@ -281,10 +284,10 @@ flowchart TD
     SKIP --> FOREACH
     SAVE_FILE --> FOREACH
     
-    FOREACH -->|Complete| END([Indexing complete])
+    FOREACH --> Complete[No more files] --> END[Indexing complete]
 ```
 
-### 6. RagService.cs (RAG Orchestration)
+### 6. RagService.cs - RAG Orchestration
 
 **Responsibilities**:
 - Query embedding generation
@@ -294,33 +297,33 @@ flowchart TD
 
 **Core Dependencies**:
 ```csharp
-private readonly DatabaseService _database;     // Data access
-private readonly DocumentIndexer _indexer;      // Indexing (initialization)
-private readonly OllamaApiClient _llm;          // llama3:8b
-private readonly OllamaApiClient _embedder;     // nomic-embed-text
+private readonly DatabaseService _database for data access
+private readonly DocumentIndexer _indexer for initialization
+private readonly OllamaApiClient _llm using llama3 8b
+private readonly OllamaApiClient _embedder using nomic-embed-text
 ```
 
 **Query Processing Pipeline**:
 
 ```mermaid
 flowchart TD
-    Q[User Question] --> VALIDATE{Valid?}
-    VALIDATE -->|No| ERROR[Return error]
-    VALIDATE -->|Yes| EMBED_Q[Embed question]
+    Q[User Question] --> VALIDATE{Is question valid}
+    VALIDATE --> No[Not valid] --> ERROR[Return error message]
+    VALIDATE --> Yes[Valid] --> EMBED_Q[Embed question]
     
-    EMBED_Q --> LOAD[Load all chunks]
-    LOAD --> CHECK{Chunks exist?}
-    CHECK -->|No| NO_DOCS[Return no documents error]
+    EMBED_Q --> LOAD[Load all chunks from database]
+    LOAD --> CHECK{Do chunks exist}
+    CHECK --> No[No chunks] --> NO_DOCS[Return no documents error]
     
-    CHECK -->|Yes| SIM[Calculate cosine similarity]
-    SIM --> SORT[Sort by score DESC]
-    SORT --> TOP[Take top 10]
+    CHECK --> Yes[Chunks exist] --> SIM[Calculate cosine similarity]
+    SIM --> SORT[Sort by score descending]
+    SORT --> TOP[Take top 10 results]
     
-    TOP --> BUILD[Build context string]
+    TOP --> BUILD[Build context string from matches]
     BUILD --> PROMPT[Create prompt with context]
-    PROMPT --> STREAM[Stream from llama3:8b]
+    PROMPT --> STREAM[Stream from llama3 8b]
     
-    STREAM --> YIELD[yield return chunk]
+    STREAM --> YIELD[Yield return chunk]
     YIELD --> USER[Display to user]
 ```
 
@@ -331,13 +334,13 @@ You are a helpful assistant.
 Answer ONLY using the supplied context.
 
 If the answer cannot be found in the context,
-say "I could not find that information."
+say I could not find that information.
 
 Context:
-{context}
+context text here
 
 Question:
-{question}
+question text here
 
 Answer:
 ```
@@ -351,25 +354,25 @@ Answer:
 ```mermaid
 flowchart LR
     subgraph Source
-        F1[products.txt]
-        F2[faq.txt]
-        F3[manual.txt]
+        F1[products dot txt]
+        F2[faq dot txt]
+        F3[manual dot txt]
     end
     
     subgraph Processing
-        H1[SHA256: A3F2...]
-        H2[SHA256: B4E1...]
-        H3[SHA256: C5D9...]
+        H1[SHA256 hash A3F2]
+        H2[SHA256 hash B4E1]
+        H3[SHA256 hash C5D9]
         
-        V1[Vector: 0.123, -0.456...]
-        V2[Vector: 0.789, -0.012...]
-        V3[Vector: -0.345, 0.678...]
+        V1[Vector 0.123 negative 0.456]
+        V2[Vector 0.789 negative 0.012]
+        V3[Vector negative 0.345 0.678]
     end
     
     subgraph Storage
-        DB[(SQLite)]
-        FT[Files Table<br/>Hash, Name, Date]
-        CT[Chunks Table<br/>Hash, Content, Vector JSON]
+        DB[SQLite Database]
+        FT[Files Table with Hash Name Date]
+        CT[Chunks Table with Hash Content Vector JSON]
     end
     
     F1 --> H1 --> V1 --> CT
@@ -385,25 +388,25 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    Q[Question:<br/>"What products?"]
+    Q[Question What products]
     
     subgraph Vectorization
-        QV[Query Vector<br/>0.234, -0.567...]
+        QV[Query Vector 0.234 negative 0.567]
     end
     
     subgraph Similarity
-        S1[0.89 - products.txt]
-        S2[0.76 - faq.txt]
-        S3[0.45 - manual.txt]
+        S1[Score 0.89 from products dot txt]
+        S2[Score 0.76 from faq dot txt]
+        S3[Score 0.45 from manual dot txt]
     end
     
     subgraph Context
-        CTX["Products: A, B, C<br/>FAQ: Pricing info..."]
+        CTX[Products A B C plus FAQ Pricing info]
     end
     
     subgraph Generation
-        PR[Prompt + Context]
-        RES["Answer: We sell A, B, C..."]
+        PR[Prompt plus Context]
+        RES[Answer We sell A B C]
     end
     
     Q --> QV
@@ -441,28 +444,30 @@ erDiagram
         TEXT Embedding
     }
     
-    FILES ||--o{ CHUNKS : "has many"
+    FILES ||--o{ CHUNKS : has many
 ```
 
 ### Detailed Schema
 
 **Files Table**:
 ```sql
-CREATE TABLE Files (
+CREATE TABLE Files
+(
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     FileName TEXT NOT NULL,
     FileHash TEXT NOT NULL UNIQUE,
     IndexedAt TEXT NOT NULL
 );
 
--- Indexes
-CREATE INDEX idx_files_hash ON Files(FileHash);
-CREATE INDEX idx_files_indexed ON Files(IndexedAt);
+Create indexes
+CREATE INDEX idx_files_hash ON Files FileHash;
+CREATE INDEX idx_files_indexed ON Files IndexedAt;
 ```
 
 **Chunks Table**:
 ```sql
-CREATE TABLE Chunks (
+CREATE TABLE Chunks
+(
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     FileHash TEXT NOT NULL,
     FileName TEXT NOT NULL,
@@ -471,29 +476,32 @@ CREATE TABLE Chunks (
     Embedding TEXT NOT NULL
 );
 
--- Indexes
-CREATE INDEX idx_chunks_hash ON Chunks(FileHash);
-CREATE INDEX idx_chunks_filename ON Chunks(FileName);
+Create indexes
+CREATE INDEX idx_chunks_hash ON Chunks FileHash;
+CREATE INDEX idx_chunks_filename ON Chunks FileName;
 ```
 
 **Sample Data**:
+
+Files row example:
 ```json
-// Files row
 {
   "Id": 1,
   "FileName": "products.txt",
   "FileHash": "A3F2C1B8E9D4F6A2B1C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4",
   "IndexedAt": "2026-06-03T14:30:22.123456Z"
 }
+```
 
-// Chunks row
+Chunks row example:
+```json
 {
   "Id": 1,
   "FileHash": "A3F2C1B8E9D4F6A2B1C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4",
   "FileName": "products.txt",
   "ChunkIndex": 0,
   "Content": "Our company sells three main products...",
-  "Embedding": "[0.123, -0.456, 0.789, -0.012, ...]"  // 768 floats
+  "Embedding": "0.123, negative 0.456, 0.789, negative 0.012 ... 768 floats total"
 }
 ```
 
@@ -505,56 +513,59 @@ CREATE INDEX idx_chunks_filename ON Chunks(FileName);
 
 **Formula**:
 ```
-similarity = (A · B) / (||A|| × ||B||)
+similarity = A dot B divided by magnitude A times magnitude B
 
 Where:
-A · B = Σ(aᵢ × bᵢ)
-||A|| = √Σ(aᵢ²)
-||B|| = √Σ(bᵢ²)
+A dot B = sum of a sub i times b sub i
+magnitude A = square root of sum of a sub i squared
+magnitude B = square root of sum of b sub i squared
 ```
 
 **Implementation**:
 ```csharp
-private static double CosineSimilarity(float[] a, float[] b)
+private static double CosineSimilarity float a float b
 {
-    double dot = 0, magA = 0, magB = 0;
+    double dot = 0 comma magA = 0 comma magB = 0
     
-    for (int i = 0; i < a.Length; i++)
+    for int i = 0 semicolon i less than a.Length semicolon i plus plus
     {
-        dot += a[i] * b[i];
-        magA += a[i] * a[i];
-        magB += b[i] * b[i];
+        dot plus equals a i times b i
+        magA plus equals a i times a i
+        magB plus equals b i times b i
     }
     
-    if (magA == 0 || magB == 0)
-        return 0;
+    if magA == 0 or magB == 0
+        return 0
     
-    return dot / (Math.Sqrt(magA) * Math.Sqrt(magB));
+    return dot divided by Math.Sqrt magA times Math.Sqrt magB
 }
 ```
 
-**Complexity**: O(n) where n = vector dimensions (768)
+**Complexity**: O of n where n equals vector dimensions 768
 
-**Output Range**: -1.0 to 1.0  
-- **1.0**: Identical vectors  
-- **0.0**: Orthogonal (no relation)  
-- **-1.0**: Opposite directions
+**Output Range**: negative 1.0 to 1.0
+
+| Value | Meaning |
+|-------|---------|
+| 1.0 | Identical vectors |
+| 0.0 | Orthogonal no relation |
+| negative 1.0 | Opposite directions |
 
 ### SHA256 Hashing
 
 **Purpose**: File identity and change detection
 
 **Characteristics**:
-- 256-bit output (64 hex characters)
-- Deterministic (same file → same hash)
+- 256-bit output with 64 hex characters
+- Deterministic where same file produces same hash
 - Collision-resistant
 
 **Implementation**:
 ```csharp
-using var sha256 = SHA256.Create();
-using var stream = File.OpenRead(filePath);
-byte[] hash = sha256.ComputeHash(stream);
-return Convert.ToHexString(hash);
+using var sha256 = SHA256.Create
+using var stream = File.OpenRead filePath
+byte hash = sha256.ComputeHash stream
+return Convert.ToHexString hash
 ```
 
 ---
@@ -566,11 +577,11 @@ return Convert.ToHexString(hash);
 **Embeddings Endpoint**:
 ```
 POST http://localhost:11434/api/embed
-Content-Type: application/json
+Content-Type application/json
 
 {
   "model": "nomic-embed-text",
-  "input": ["Your text here..."]
+  "input": "Your text here"
 }
 ```
 
@@ -578,24 +589,24 @@ Content-Type: application/json
 ```json
 {
   "embeddings": [
-    [0.123, -0.456, 0.789, ...]  // 768 floats
+    0.123 comma negative 0.456 comma 0.789
   ]
 }
 ```
 
-**Generate Endpoint** (Streaming):
+**Generate Endpoint for Streaming**:
 ```
 POST http://localhost:11434/api/generate
-Content-Type: application/json
+Content-Type application/json
 
 {
   "model": "llama3:8b",
-  "prompt": "Your prompt here...",
+  "prompt": "Your prompt here",
   "stream": true
 }
 ```
 
-**Streaming Response** (SSE format):
+**Streaming Response Format**:
 ```
 data: {"response": "Hello", "done": false}
 
@@ -607,23 +618,23 @@ data: {"response": "", "done": true}
 ### OllamaSharp API Usage
 
 ```csharp
-// Embedding generation
-var embedResponse = await _embedder.EmbedAsync(new EmbedRequest
+Embedding generation
+var embedResponse = await _embedder.EmbedAsync new EmbedRequest
 {
     Model = "nomic-embed-text",
-    Input = new List<string> { text }
-});
-float[] vector = embedResponse.Embeddings[0].ToArray();
+    Input = new List string  text
+}
+float vector = embedResponse.Embeddings index 0 dot ToArray
 
-// Streaming generation
-await foreach (var chunk in _llm.GenerateAsync(new GenerateRequest
+Streaming generation
+await foreach var chunk in _llm.GenerateAsync new GenerateRequest
 {
     Model = "llama3:8b",
     Prompt = prompt,
     Stream = true
-}))
+}
 {
-    Console.Write(chunk.Response);
+    Console.Write chunk.Response
 }
 ```
 
@@ -635,39 +646,39 @@ await foreach (var chunk in _llm.GenerateAsync(new GenerateRequest
 
 | Parameter | Location | Default | Description |
 |-----------|----------|---------|-------------|
-| DocumentsFolder | DocumentIndexer.cs | `C:\RagDocuments` | Source document directory |
-| DatabaseFile | DatabaseService.cs | `rag.db` | SQLite database file |
-| OllamaEndpoint | RagService.cs | `http://localhost:11434` | Ollama API endpoint |
-| LLMModel | RagService.cs | `llama3:8b` | Generation model |
-| EmbeddingModel | RagService.cs | `nomic-embed-text` | Embedding model |
-| MaxContextLength | RagService.cs | `7000` | Characters for context |
-| TopK | RagService.cs | `10` | Number of chunks retrieved |
+| DocumentsFolder | DocumentIndexer.cs | C colon backslash RagDocuments | Source document directory |
+| DatabaseFile | DatabaseService.cs | rag.db | SQLite database file name |
+| OllamaEndpoint | RagService.cs | http://localhost:11434 | Ollama API endpoint URL |
+| LLMModel | RagService.cs | llama3 8b | Model used for generation |
+| EmbeddingModel | RagService.cs | nomic-embed-text | Model used for embeddings |
+| MaxContextLength | RagService.cs | 7000 | Maximum characters for context |
+| TopK | RagService.cs | 10 | Number of chunks retrieved |
 
 ### Modifiable Parameters
 
 **Change Document Path**:
 ```csharp
-// DocumentIndexer.cs, line 10
-private const string DocumentsFolder = @"D:\MyDocuments";
+In DocumentIndexer.cs line 10
+private const string DocumentsFolder = D colon backslash MyDocuments
 ```
 
 **Adjust Context Window**:
 ```csharp
-// RagService.cs, ExecuteStreamingQuery() method
-if (contextBuilder.Length > 5000)  // Change from 7000
+In RagService.cs ExecuteStreamingQuery method
+if contextBuilder.Length greater than 5000  change from 7000
 ```
 
 **Modify Retrieval Count**:
 ```csharp
-// RagService.cs, ExecuteStreamingQuery() method
-.Take(5)  // Change from 10
+In RagService.cs ExecuteStreamingQuery method
+Take 5 instead of 10
 ```
 
 **Switch Models**:
 ```csharp
-// RagService.cs, constructor
-_llm = new OllamaApiClient(uri, "mistral");           // Different LLM
-_embedder = new OllamaApiClient(uri, "all-minilm");  // Different embeddings
+In RagService.cs constructor
+_llm = new OllamaApiClient uri comma "mistral" for different LLM
+_embedder = new OllamaApiClient uri comma "all-minilm" for different embeddings
 ```
 
 ---
@@ -676,38 +687,38 @@ _embedder = new OllamaApiClient(uri, "all-minilm");  // Different embeddings
 
 ### Time Complexities
 
-| Operation | Complexity | Typical Time (First Run) | Typical Time (Cached) |
-|-----------|------------|--------------------------|----------------------|
-| File hashing | O(file size) | ~10ms/MB | N/A |
-| Embedding generation | O(text length × 768) | ~500ms/doc | ~50ms/doc (cached) |
-| Similarity search | O(chunks × 768) | ~100ms for 1000 chunks | Same |
-| LLM generation | O(output tokens) | ~2-5 sec/response | Same |
+| Operation | Complexity | Typical Time First Run | Typical Time Cached |
+|-----------|------------|------------------------|---------------------|
+| File hashing | O of file size | 10 milliseconds per megabyte | Not applicable |
+| Embedding generation | O of text length times 768 | 500 milliseconds per document | 50 milliseconds per document |
+| Similarity search | O of chunks times 768 | 100 milliseconds for 1000 chunks | 100 milliseconds same |
+| LLM generation | O of output tokens | 2 to 5 seconds per response | Same as first run |
 
 ### Space Complexity
 
 | Storage | Size Estimate | Calculation |
 |---------|---------------|-------------|
-| Vector storage | ~3KB per chunk | 768 floats × 4 bytes + JSON overhead |
-| Text storage | ~1KB per chunk | Original text |
-| File metadata | ~200 bytes per file | Hash + name + timestamp |
+| Vector storage | 3 kilobytes per chunk | 768 floats times 4 bytes plus JSON overhead |
+| Text storage | 1 kilobyte per chunk | Original text content |
+| File metadata | 200 bytes per file | Hash plus name plus timestamp |
 
-**Example**: 1000 chunks → ~4MB for vectors + ~1MB for text = ~5MB total
+**Example Calculation**: 1000 chunks equals approximately 4 megabytes for vectors plus 1 megabyte for text equals 5 megabytes total
 
 ### Bottlenecks
 
 ```mermaid
 flowchart LR
-    subgraph Bottleneck["Primary Bottleneck"]
-        O[Ollama API<br/>Local inference]
+    subgraph Bottleneck["Primary Bottleneck Location"]
+        O[Ollama API performing local inference]
     end
     
-    subgraph Secondary["Secondary Bottlenecks"]
-        D[Disk I/O<br/>SQLite reads]
-        S[Similarity Search<br/>O(n) scan]
-        M[Memory<br/>All chunks loaded]
+    subgraph Secondary["Secondary Bottleneck Locations"]
+        D[Disk I O for SQLite reads]
+        S[Similarity Search with O n scan]
+        M[Memory usage loading all chunks]
     end
     
-    O -->|Slowest| B[Overall Response Time]
+    O --> B[Overall Response Time]
     D --> B
     S --> B
     M --> B
@@ -715,43 +726,43 @@ flowchart LR
 
 ### Optimization Opportunities
 
-| Area | Current | Optimized | Implementation |
-|------|---------|-----------|----------------|
-| Search | O(n) scan | O(log n) | SQLite vector extension |
-| Memory | All chunks | Streaming | Paginated loading |
-| Caching | None | Embedding cache | Dictionary cache |
-| Parallelism | Sequential | Parallel | `Parallel.ForEach` for indexing |
+| Area | Current | Optimized | Implementation Method |
+|------|---------|-----------|----------------------|
+| Search | O of n scan | O of log n | Add SQLite vector extension |
+| Memory | All chunks loaded | Streaming loads | Implement paginated loading |
+| Caching | None implemented | Embedding cache | Add dictionary cache |
+| Parallelism | Sequential | Parallel execution | Use Parallel dot ForEach for indexing |
 
 ---
 
 ## Error Handling
 
-### Error Types & Recovery
+### Error Types and Recovery
 
 ```mermaid
 flowchart TD
-    E[Error Occurred] --> TYPE{Error Type}
+    E[Error Occurred] --> TYPE{Determine Error Type}
     
-    TYPE -->|Ollama Connection| O1[Log error]
-    O1 --> O2[Display: [ERR] Connection failed]
-    O2 --> O3[Stats show [OFFLINE]]
-    O3 --> O4[Continue - use cached data]
+    TYPE --> Ollama[Ollama Connection Error] --> O1[Log error message]
+    O1 --> O2[Display ERR Connection failed]
+    O2 --> O3[Statistics show OFFLINE status]
+    O3 --> O4[Continue with cached data only]
     
-    TYPE -->|File Not Found| F1[Log warning]
-    F1 --> F2[Display: [WARN] Skipping file]
+    TYPE --> File[File Not Found Error] --> F1[Log warning message]
+    F1 --> F2[Display WARN Skipping file]
     F2 --> F3[Continue with next file]
     
-    TYPE -->|Database Locked| D1[Log error]
-    D1 --> D2[Display: [ERR] DB locked]
-    D2 --> D3[Exit or retry?]
+    TYPE --> Database[Database Locked Error] --> D1[Log error message]
+    D1 --> D2[Display ERR Database locked]
+    D2 --> D3[Exit or retry based on user choice]
     
-    TYPE -->|Invalid Question| Q1[Log info]
-    Q1 --> Q2[Display: Please enter valid question]
-    Q2 --> Q3[Return to prompt]
+    TYPE --> Invalid[Invalid Question Error] --> I1[Log info message]
+    I1 --> I2[Display please enter valid question]
+    I2 --> I3[Return to prompt]
     
-    TYPE -->|Model Not Found| M1[Log error]
-    M1 --> M2[Display: Pull model first]
-    M2 --> M3[Exit]
+    TYPE --> Model[Model Not Found Error] --> M1[Log error message]
+    M1 --> M2[Display pull model first]
+    M2 --> M3[Exit application]
 ```
 
 ### Exception Handling Pattern
@@ -759,30 +770,29 @@ flowchart TD
 ```csharp
 try
 {
-    // Operation
+    Perform operation
 }
-catch (SqliteException ex) when (ex.SqliteErrorCode == 5)
+catch SqliteException ex when ex.SqliteErrorCode equals 5
 {
-    // Database locked
-    ColorHelper.WriteError("Database is locked. Close other connections.");
+    Handle database locked
+    ColorHelper.WriteError "Database is locked close other connections"
 }
-catch (HttpRequestException ex)
+catch HttpRequestException ex
 {
-    // Ollama connection failed
-    ColorHelper.WriteError($"Cannot connect to Ollama: {ex.Message}");
+    Handle Ollama connection failed
+    ColorHelper.WriteError $"Cannot connect to Ollama colon ex.Message"
 }
-catch (FileNotFoundException ex)
+catch FileNotFoundException ex
 {
-    // Document missing
-    ColorHelper.WriteWarning($"File not found: {ex.FileName}");
+    Handle document missing
+    ColorHelper.WriteWarning $"File not found colon ex.FileName"
 }
-catch (Exception ex)
+catch Exception ex
 {
-    // General error
-    ColorHelper.WriteError($"Unexpected error: {ex.Message}");
-#if DEBUG
-    ColorHelper.WriteColoredMessage(ex.ToString(), ConsoleColor.DarkRed);
-#endif
+    Handle general error
+    ColorHelper.WriteError $"Unexpected error colon ex.Message"
+    In debug mode
+    ColorHelper.WriteColoredMessage ex.ToString comma ConsoleColor.DarkRed
 }
 ```
 
@@ -795,29 +805,29 @@ catch (Exception ex)
 | Aspect | Implementation | Risk Level |
 |--------|----------------|------------|
 | Data transmission | Localhost only | None |
-| API authentication | None (local) | Low |
-| File access | User context | Medium |
-| Database encryption | None | Low (local) |
+| API authentication | None for local use | Low |
+| File access | Current user context | Medium |
+| Database encryption | None in default setup | Low for local use |
 
-### Recommended Hardening
+### Recommended Hardening for Production
 
-**For Production Use**:
 ```csharp
-// Add SQLite encryption
-using (var connection = new SqliteConnection("Data Source=rag.db;Password=secret"))
+Add SQLite encryption
+using var connection = new SqliteConnection 
+    "Data Source rag.db semicolon Password secret"
 {
-    connection.Open();
-    connection.Execute("PRAGMA key = 'your-key';");
+    connection.Open
+    connection.Execute "PRAGMA key = your key"
 }
 
-// Validate file paths
-if (!Path.GetFullPath(file).StartsWith(DocumentsFolder))
+Validate file paths to prevent traversal
+if not Path.GetFullPath file dot StartsWith DocumentsFolder
 {
-    throw new SecurityException("Path traversal detected");
+    throw new SecurityException "Path traversal detected"
 }
 
-// Sanitize user input
-var sanitized = question.Replace("--", "").Replace(";", "");
+Sanitize user input
+var sanitized = question dot Replace dash dash empty string dot Replace semicolon empty string
 ```
 
 ---
@@ -829,133 +839,133 @@ var sanitized = question.Replace("--", "").Replace(";", "");
 ```mermaid
 flowchart TB
     subgraph Current["Current Implementation"]
-        C1[Whole-file chunking]
+        C1[Whole file chunking]
         C2[Cosine similarity]
         C3[SQLite storage]
         C4[Console UI]
     end
     
     subgraph Extension["Extension Points"]
-        E1[IChunkingStrategy]
-        E2[ISimilarityStrategy]
-        E3[IVectorStore]
-        E4[IUIProvider]
+        E1[IChunkingStrategy interface]
+        E2[ISimilarityStrategy interface]
+        E3[IVectorStore interface]
+        E4[IUIProvider interface]
     end
     
-    C1 -.->|Replace| E1
-    C2 -.->|Replace| E2
-    C3 -.->|Replace| E3
-    C4 -.->|Replace| E4
+    C1 -.-> E1
+    C2 -.-> E2
+    C3 -.-> E3
+    C4 -.-> E4
 ```
 
 ### Interface Definitions
 
-**Chunking Strategy**:
+**Chunking Strategy Interface**:
 ```csharp
 public interface IChunkingStrategy
 {
-    IEnumerable<string> Chunk(string text, int maxChunkSize);
+    IEnumerable string Chunk string text comma int maxChunkSize
 }
-
-// Example implementations:
-// - SemanticChunking: Split by paragraphs
-// - FixedSizeChunking: Current implementation
-// - SentenceChunking: Split by sentences
 ```
 
-**Similarity Strategy**:
+Example implementations:
+- SemanticChunking splits by paragraphs
+- FixedSizeChunking matches current implementation
+- SentenceChunking splits by sentences
+
+**Similarity Strategy Interface**:
 ```csharp
 public interface ISimilarityStrategy
 {
-    double Calculate(float[] a, float[] b);
+    double Calculate float a comma float b
 }
-
-// Example implementations:
-// - CosineSimilarity: Current
-// - DotProductSimilarity: Alternative
-// - EuclideanDistance: For certain embeddings
 ```
 
-**Vector Store**:
+Example implementations:
+- CosineSimilarity matches current implementation
+- DotProductSimilarity provides alternative
+- EuclideanDistance works for certain embeddings
+
+**Vector Store Interface**:
 ```csharp
 public interface IVectorStore
 {
-    Task SaveAsync(string id, float[] vector, string metadata);
-    Task<List<(float[] Vector, string Metadata)>> SearchAsync(float[] query, int k);
+    Task SaveAsync string id comma float vector comma string metadata
+    Task List float Vector comma string Metadata SearchAsync float query comma int k
 }
-
-// Example implementations:
-// - SQLiteVectorStore: Current
-// - PostgreSQLVectorStore: Production
-// - InMemoryVectorStore: Testing
 ```
+
+Example implementations:
+- SQLiteVectorStore matches current implementation
+- PostgreSQLVectorStore for production use
+- InMemoryVectorStore for testing
 
 ### Adding New Document Types
 
 ```csharp
-// Extend DocumentIndexer
-public async Task IndexPdfAsync(string pdfPath)
+Extend DocumentIndexer class
+public async Task IndexPdfAsync string pdfPath
 {
-    var text = ExtractPdfText(pdfPath);  // Add PDF library
-    // Rest of indexing pipeline same
+    var text = ExtractPdfText pdfPath using PDF library
+    Rest of indexing pipeline remains same
 }
 
-// Register supported extensions
-private readonly HashSet<string> _supportedExtensions = new()
+Register supported extensions
+private readonly HashSet string _supportedExtensions = new HashSet string
 {
-    ".txt", ".json", ".pdf", ".docx"  // Add new extensions
-};
+    dot txt comma dot json comma dot pdf comma dot docx
+}
 ```
 
 ---
 
 ## Deployment Checklist
 
-- [ ] .NET 9 SDK installed
-- [ ] Ollama installed and running
-- [ ] `llama3:8b` model pulled
-- [ ] `nomic-embed-text` model pulled
-- [ ] `C:\RagDocuments` folder created
-- [ ] Sample documents added
-- [ ] Port 11434 available (Ollama)
-- [ ] Write permissions in app directory (for SQLite)
+- Confirm .NET 9 SDK installed
+- Verify Ollama installed and running
+- Confirm llama3 8b model pulled
+- Verify nomic-embed-text model pulled
+- Create C colon backslash RagDocuments folder
+- Add sample documents to folder
+- Ensure port 11434 is available for Ollama
+- Verify write permissions in application directory for SQLite
 
 ---
 
 ## Troubleshooting Matrix
 
-| Symptom | Likely Cause | Diagnostic | Solution |
-|---------|--------------|------------|----------|
-| "No connection" | Ollama not running | `curl localhost:11434` | `ollama serve` |
-| "Model not found" | Model not pulled | `ollama list` | `ollama pull [model]` |
-| Slow first query | Generating embeddings | Check CPU usage | Normal, wait |
-| Database locked | Another process using SQLite | Check for open connections | Close SQLite browsers |
-| No results found | Empty document folder | Check `C:\RagDocuments` | Add documents |
-| Encoding errors | Unicode in console | `Console.OutputEncoding` | Set to ASCII or Unicode |
+| Symptom | Likely Cause | Diagnostic Command | Solution |
+|---------|--------------|-------------------|----------|
+| No connection message | Ollama not running | curl localhost colon 11434 | Run ollama serve |
+| Model not found error | Model not pulled | ollama list | Run ollama pull model name |
+| Slow first query | Generating embeddings | Check CPU usage | Normal behavior wait for completion |
+| Database locked message | Another process using SQLite | Check for open connections | Close SQLite browsers |
+| No results found message | Empty document folder | Check C RagDocuments folder | Add documents to folder |
+| Encoding errors displayed | Unicode in console output | Check Console OutputEncoding | Set to ASCII or Unicode as needed |
 
 ---
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2026-06-03 | Initial release with SQLite storage, ASCII UI, streaming responses |
+| Version | Date | Changes Description |
+|---------|------|---------------------|
+| 1.0 | 2026-06-03 | Initial release with SQLite storage ASCII UI and streaming responses |
 
 ---
 
 ## Appendix A: Ollama Model Specifications
 
-### llama3:8b
-- **Parameters**: 8 billion
-- **Context length**: 8192 tokens
-- **Training**: Meta Llama 3
-- **Use case**: Text generation
+**llama3 8b Model**
+- Parameters: 8 billion
+- Context length: 8192 tokens
+- Training: Meta Llama 3
+- Use case: Text generation
 
-### nomic-embed-text
-- **Parameters**: 137 million
-- **Output dimension**: 768
-- **Training**: Nomic AI
-- **Use case**: Text embeddings
+**nomic-embed-text Model**
+- Parameters: 137 million
+- Output dimension: 768
+- Training: Nomic AI
+- Use case: Text embeddings
 
 ---
 
@@ -963,36 +973,36 @@ private readonly HashSet<string> _supportedExtensions = new()
 
 | Term | Definition |
 |------|------------|
-| **RAG** | Retrieval-Augmented Generation - combining search with LLMs |
-| **Embedding** | Numerical vector representation of text |
-| **Cosine Similarity** | Measure of angle between two vectors |
-| **Chunk** | Segment of a document for embedding |
-| **Context Window** | Maximum tokens LLM can process |
-| **Vector Store** | Database optimized for vector search |
-| **SHA256** | Cryptographic hash function |
+| RAG | Retrieval-Augmented Generation combining search with large language models |
+| Embedding | Numerical vector representation of text |
+| Cosine Similarity | Measure of angle between two vectors |
+| Chunk | Segment of a document prepared for embedding |
+| Context Window | Maximum tokens a large language model can process |
+| Vector Store | Database optimized for vector similarity search |
+| SHA256 | Cryptographic hash function producing 256-bit output |
 
 ---
 
 ## Appendix C: Useful SQL Queries
 
 ```sql
--- View indexed files
-SELECT FileName, IndexedAt FROM Files ORDER BY IndexedAt DESC;
+View indexed files
+SELECT FileName comma IndexedAt FROM Files ORDER BY IndexedAt DESC semicolon
 
--- Count chunks per file
-SELECT FileName, COUNT(*) as ChunkCount 
+Count chunks per file
+SELECT FileName comma COUNT star as ChunkCount 
 FROM Chunks 
 GROUP BY FileName 
-ORDER BY ChunkCount DESC;
+ORDER BY ChunkCount DESC semicolon
 
--- Find recently added documents
-SELECT FileName, IndexedAt 
+Find recently added documents from last 7 days
+SELECT FileName comma IndexedAt 
 FROM Files 
-WHERE IndexedAt > datetime('now', '-7 days');
+WHERE IndexedAt greater than datetime now comma negative 7 days semicolon
 
--- Database size
-SELECT page_count * page_size as Size 
-FROM pragma_page_count(), pragma_page_size();
+Check database size
+SELECT page_count times page_size as Size 
+FROM pragma_page_count comma pragma_page_size semicolon
 ```
 
 ---
